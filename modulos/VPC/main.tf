@@ -60,7 +60,7 @@ data "aws_availability_zones" "available" {
 
 # Fase 3: Diseño de las puertas de enlace IGW y NATGW 
 resource "aws_internet_gateway" "igw_subnet_public" {
-  vpc_id            = aws_vpc.main.id
+  vpc_id        = aws_vpc.main.id
 
   tags = {
     Name = "IGW-${var.Region_name}"
@@ -68,7 +68,7 @@ resource "aws_internet_gateway" "igw_subnet_public" {
 }
 
 resource "aws_eip" "nat_eip" {
-  domain = "vpc"
+  domain        = "vpc"
 
   tags = {
     Name = "ELASTIC-IP-NAT-GW-${var.Region_name}"
@@ -76,7 +76,7 @@ resource "aws_eip" "nat_eip" {
 }
 
 resource "aws_nat_gateway" "natgw_subnet_private" {
-  subnet_id = aws_subnet.public_web[0].id
+  subnet_id     = aws_subnet.public_web[0].id
   allocation_id = aws_eip.nat_eip.id
 
   tags = {
@@ -84,3 +84,45 @@ resource "aws_nat_gateway" "natgw_subnet_private" {
   }
 }
 
+# Fase 4 Configuracion de tablas de enrutamiento
+resource "aws_route_table" "rt_igw" {
+  vpc_id         = aws_vpc.main.id
+
+  route {
+    cidr_block   = "0.0.0.0/0"
+    gateway_id   = aws_internet_gateway.igw_subnet_public.id
+  }
+  tags = {
+    Name = "Route-Table-IGW-${var.Region_name}"
+  }
+}
+
+resource "aws_route_table_association" "association_subnet_public" {
+  count          = 2
+  subnet_id      = aws_subnet.public_web[count.index].id
+  route_table_id = aws_route_table.rt_igw.id
+}
+
+resource "aws_route_table" "rt_nat_gw" {
+  vpc_id           = aws_vpc.main.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.natgw_subnet_private.id
+  }
+  tags = {
+    Name = "Route-Table-NAT-GW-${var.Region_name}"
+  }
+}
+
+resource "aws_route_table_association" "association_privateapp" {
+  count            = 2
+  subnet_id        = aws_subnet.private_app[count.index].id
+  route_table_id   = aws_route_table.rt_nat_gw.id
+}
+
+resource "aws_route_table_association" "association_privatedb" {
+  count            = 2
+  subnet_id        = aws_subnet.private_db[count.index].id
+  route_table_id   = aws_route_table.rt_nat_gw.id
+}
