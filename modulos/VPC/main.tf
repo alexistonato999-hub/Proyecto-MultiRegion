@@ -58,3 +58,29 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+# Fase 3: Diseño de las puertas de enlace IGW y NATGW 
+resource "aws_internet_gateway" "igw_subnet_public" {
+  vpc_id            = aws_vpc.main.id
+
+  tags = {
+    Name = "IGW-${var.Region_name}"
+  }
+}
+
+resource "aws_eip" "nat_eip" {
+  domain = "vpc"
+
+  tags = {
+    Name = "ELASTIC-IP-NAT-GW-${var.Region_name}"
+  }
+}
+
+resource "aws_nat_gateway" "natgw_subnet_private" {
+  subnet_id = aws_subnet.public_web[0].id
+  allocation_id = aws_eip.nat_eip.id
+
+  tags = {
+    Name = "NAT-GW-${var.Region_name}"
+  }
+}
+
