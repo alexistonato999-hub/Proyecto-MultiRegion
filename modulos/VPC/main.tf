@@ -126,3 +126,84 @@ resource "aws_route_table_association" "association_privatedb" {
   subnet_id        = aws_subnet.private_db[count.index].id
   route_table_id   = aws_route_table.rt_nat_gw.id
 }
+
+# Fase 5 : Diseño y configuracion de los SG Y ACLs
+resource "aws_security_group" "sg_alb" {
+  name        = "SG-ALB-${var.Region_name}"
+  description = "Grupo de seguridad para el ALB"
+  vpc_id      = aws_vpc.main.id
+
+  ingress  {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]  
+  }
+  
+  ingress  {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] 
+  }
+
+  egress  {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "SG-ALB-${var.Region_name}"
+  }
+}
+
+resource "aws_security_group" "sg_app" {
+  name         = "SG-APP-${var.Region_name}"
+  description  = "Grupo de seguridad para la capa de aplicacion"
+  vpc_id       = aws_vpc.main.id
+
+  ingress {
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.sg_alb.id]
+  }
+
+  egress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks     = ["0.0.0.0/0"] 
+  }
+
+  tags = {
+    Name = "SG-APP-${var.Region_name}"
+  }
+}
+
+resource "aws_security_group" "sg_db" {
+  name         = "SG-DB-${var.Region_name}"
+  description  = "Grupo de seguridad para la capa de base de datos"
+  vpc_id       = aws_vpc.main.id
+
+  ingress {
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.sg_app.id]
+  } 
+
+  egress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks     = ["0.0.0.0/0"] 
+  }
+
+  tags = {
+    Name = "SG-DB-${var.Region_name}"
+  }
+}
+
