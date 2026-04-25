@@ -127,7 +127,7 @@ resource "aws_route_table_association" "association_privatedb" {
   route_table_id   = aws_route_table.rt_nat_gw.id
 }
 
-# Fase 5 : Diseño y configuracion de los SG Y ACLs
+# Fase 5 : Diseño y configuracion de los SG
 resource "aws_security_group" "sg_alb" {
   name        = "SG-ALB-${var.Region_name}"
   description = "Grupo de seguridad para el ALB"
@@ -189,8 +189,8 @@ resource "aws_security_group" "sg_db" {
   vpc_id       = aws_vpc.main.id
 
   ingress {
-    from_port       = 80
-    to_port         = 80
+    from_port       = 3306
+    to_port         = 3306
     protocol        = "tcp"
     security_groups = [aws_security_group.sg_app.id]
   } 
@@ -204,6 +204,51 @@ resource "aws_security_group" "sg_db" {
 
   tags = {
     Name = "SG-DB-${var.Region_name}"
+  }
+}
+
+# Fase 6 Configuracion de los Balanceadores de Carga
+resource "aws_lb" "alb" {
+  name               = "ALB-${var.Region_name}"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.sg_alb.id]
+  subnets            = aws_subnet.public_web[*].id 
+  enable_deletion_protection = false 
+
+  tags = {
+    Name = "ALB-${var.Region_name}"
+  }
+}
+
+resource "aws_lb_target_group" "app_tg" {
+  name     = "TG-App-${var.Region_name}"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+
+  health_check {
+    enabled             = true
+    path                = "/"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 3
+    unhealthy_threshold = 2
+  }
+
+  tags = {
+    Name = "TG-App-${var.Region_name}"
+  }
+}
+
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app_tg.arn
   }
 }
 
