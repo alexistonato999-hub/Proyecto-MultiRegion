@@ -34,3 +34,61 @@ resource "aws_vpc_peering_connection_accepter" "london_accept" {
     Name = "Peering-Aceptado-Londres"
   }
 }
+
+# Fase 8: Configuracion de healt checks con Amazon Route 53
+resource "aws_route53_health_check" "virginia_health" {
+  provider          = aws.Region-Activa-A
+  fqdn              = module.VPC_Region_A.alb_dns_name
+  port              = 80
+  type              = "HTTP"
+  resource_path     = "/"
+  failure_threshold = "3"
+  request_interval  = "30"
+
+  tags = { Name = "Monitor-Virginia" }
+}
+
+# Zona Hospedada (Pruebas)
+resource "aws_route53_zone" "main" {
+  provider = aws.Region-Activa-A
+  name = "tutesis.com"
+}
+
+resource "aws_route53_record" "primary" {
+  provider = aws.Region-Activa-A
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "app.tutesis.com"
+  type    = "A"
+
+  alias {
+    name                   = module.VPC_Region_A.alb_dns_name
+    zone_id                = module.VPC_Region_A.alb_zone_id
+    evaluate_target_health = true
+  }
+
+  failover_routing_policy {
+    type = "PRIMARY"
+  }
+
+  set_identifier = "Virginia-Active"
+  health_check_id = aws_route53_health_check.virginia_health.id
+}
+
+resource "aws_route53_record" "secondary" {
+  provider = aws.Region-Pasiva-B
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "app.tutesis.com"
+  type    = "A"
+
+  alias {
+    name                   = module.VPC_Region_B.alb_dns_name
+    zone_id                = module.VPC_Region_B.alb_zone_id
+    evaluate_target_health = true
+  }
+
+  failover_routing_policy {
+    type = "SECONDARY"
+  }
+
+  set_identifier = "London-Passive"
+}
