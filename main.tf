@@ -155,3 +155,45 @@ resource "aws_cloudfront_distribution" "main_distribution" {
     Entorno = "Produccion"
   }
 }
+
+module "Computo_Region_A" {
+  source          = "./Modulos/Computo"
+  providers       = { aws = aws.Region-Activa-A }
+  
+  Region_name     = "Virginia"
+  vpc_id          = module.VPC_Region_A.vpc_id
+  ami_id          = "ami-xxxxxx" # AMI de Ubuntu/Amazon Linux
+  instance_type   = "t3.medium"
+  
+  # Conexión de Subredes
+  public_subnets  = module.VPC_Region_A.public_subnet_ids
+  private_subnets = module.VPC_Region_A.private_app_subnet_ids
+  
+  # Conexión de Seguridad (Pasando los SG que ya creamos)
+  sg_alb_id = module.VPC_Region_A.security_group_alb_id
+  sg_app_id = module.VPC_Region_A.security_group_app_id
+
+  # Unión con el Balanceador (ALB)
+  tg_web_arn      = module.VPC_Region_A.target_group_arn
+}
+
+module "Computo_Region_B" {
+  source          = "./Modulos/Computo"
+  providers       = { aws = aws.Region-Pasiva-B}
+  
+  Region_name     = "Londres"
+  vpc_id          = module.VPC_Region_B.vpc_id
+  ami_id          = "ami-xxxxxx" # AMI de Ubuntu/Amazon Linux
+  instance_type   = "t3.medium"
+  
+  # Conexión de Subredes
+  public_subnets  = module.VPC_Region_B.public_subnet_ids
+  private_subnets = module.VPC_Region_B.private_app_subnet_ids
+  
+  # Conexión de Seguridad (Pasando los SG que ya creamos)
+  sg_alb_id = module.VPC_Region_B.security_group_alb_id
+  sg_app_id = module.VPC_Region_B.security_group_app_id
+
+  # Unión con el Balanceador (ALB)
+  tg_web_arn      = module.VPC_Region_B.target_group_arn
+}

@@ -10,6 +10,10 @@ output "private_app_subnet_ids" {
   value       = aws_subnet.private_app[*].id
   description = "IDs de subredes privadas para las instancias EC2 (Capa de Aplicación)"
 }
+output "security_group_alb_id" {
+  value       = aws_security_group.sg_alb.id
+  description = "SG de la web"
+}
 output "security_group_app_id" {
   value       = aws_security_group.sg_app.id
   description = "SG de la App para que el módulo de Cómputo pueda recibir tráfico del ALB"
