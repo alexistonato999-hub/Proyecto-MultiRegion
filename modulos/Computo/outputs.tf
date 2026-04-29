@@ -1,4 +1,3 @@
-# Outputs para la Capa Web
 output "asg_web_name" {
   value = aws_autoscaling_group.asg_web.name
 }
@@ -7,7 +6,6 @@ output "launch_template_web_id" {
   value = aws_launch_template.web_server_lt.id
 }
 
-# Outputs para la Capa de Aplicación
 output "asg_app_name" {
   value = aws_autoscaling_group.asg_app.name
 }

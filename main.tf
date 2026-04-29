@@ -197,3 +197,32 @@ module "Computo_Region_B" {
   # Unión con el Balanceador (ALB)
   tg_web_arn      = module.VPC_Region_B.target_group_arn
 }
+
+module "Base_de_Datos_Region_A" {
+  source          = "./Modulos/BasedeDatos"
+  providers       = { aws = aws.Region-Activa-A }
+  
+  Region_name     = "Virginia"
+  vpc_id          = module.VPC_Region_A.vpc_id
+  
+  db_subnet_ids   = module.VPC_Region_A.db_subnet_ids 
+  
+  db_sg_id        = module.VPC_Region_A.security_group_db_id 
+  
+  db_user         = var.db_user
+  db_name         = var.db_name
+  db_password     = var.db_password
+}
+ 
+module "Base_de_Datos_Region_B" {
+  source          = "./Modulos/BasedeDatos"
+  providers       = { aws = aws.Region-Pasiva-B }
+  
+  Region_name     = "Londres"
+  vpc_id          = module.VPC_Region_B.vpc_id
+  db_subnet_ids   = module.VPC_Region_B.db_subnet_ids
+  db_sg_id        = module.VPC_Region_B.security_group_db_id
+  
+  replicate_source_db = module.Base_de_Datos_Region_A.db_instance_arn
+  
+}
